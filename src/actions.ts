@@ -1,21 +1,28 @@
+import { SocketCommandActionType, SocketCommandType } from './command.js'
 import type { ModuleInstance } from './main.js'
 
 export function UpdateActions(self: ModuleInstance): void {
 	self.setActionDefinitions({
-		sample_action: {
-			name: 'My First Action',
+		toggle_mic: {
+			name: 'Toggle Microphone',
 			options: [
 				{
-					id: 'num',
+					id: 'roomNumber',
 					type: 'number',
-					label: 'Test',
-					default: 5,
-					min: 0,
+					label: 'Room Number',
+					default: 1,
+					min: 1,
 					max: 100,
 				},
 			],
 			callback: async (event) => {
-				console.log('Hello world!', event.options.num)
+				self.broadcast({
+					type: SocketCommandType.Request,
+					action: SocketCommandActionType.ToggleMic,
+					data: {
+						roomNumber: event.options.roomNumber,
+					},
+				})
 			},
 		},
 	})

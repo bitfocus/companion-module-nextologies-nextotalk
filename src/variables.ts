@@ -1,9 +1,10 @@
 import type { ModuleInstance } from './main.js'
 
 export function UpdateVariableDefinitions(self: ModuleInstance): void {
-	self.setVariableDefinitions([
-		{ variableId: 'variable1', name: 'My first variable' },
-		{ variableId: 'variable2', name: 'My second variable' },
-		{ variableId: 'variable3', name: 'Another variable' },
-	])
+	const variables = []
+	for (let i = 1; i <= 10; i++) {
+		variables.push({ variableId: `room_${i}_name`, name: `Room ${i} Name` })
+		variables.push({ variableId: `room_${i}_status`, name: `Room ${i} Status` })
+	}
+	self.setVariableDefinitions(variables)
 }

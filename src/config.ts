@@ -17,11 +17,11 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 		{
 			type: 'number',
 			id: 'port',
-			label: 'Target Port',
+			label: 'WebSocket Port',
 			width: 4,
 			min: 1,
 			max: 65535,
-			default: 8000,
+			default: 7005,
 		},
 	]
 }
