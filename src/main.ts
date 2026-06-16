@@ -17,7 +17,7 @@ import { ModuleState } from './state.js'
 
 // Bump on every build so you can confirm the running module matches your build.
 // Keep in sync with package.json / companion/manifest.json.
-const MODULE_VERSION = '0.3.0'
+const MODULE_VERSION = '0.4.0'
 
 function toBool(val: any): boolean {
 	if (typeof val === 'boolean') return val
@@ -355,9 +355,15 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				if (meetingId !== undefined && meetingId !== null) {
 					meetingId = String(meetingId)
 				}
-				this.state.setMeetingActive(meetingId, false)
+				const sdKeyId = command.data.sdKeyId
 
-				this.log('info', `Meeting set to inactive: ${meetingId}`)
+				// Clear the action↔meeting mapping and the meeting state — not just mark it inactive
+				// — otherwise the button keeps the room name and pressing it still toggles the room
+				// (false negative). After this the key goes fully blank.
+				if (sdKeyId) this.state.mapActionToMeeting(sdKeyId, null)
+				if (meetingId) this.state.removeMeeting(meetingId)
+
+				this.log('info', `Released key ${sdKeyId} from meeting ${meetingId}`)
 				this.checkFeedbacks('mic_status')
 
 				// Send acknowledgment response if it was a request
