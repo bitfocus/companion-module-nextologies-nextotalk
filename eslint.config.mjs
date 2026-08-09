@@ -1,18 +1,5 @@
 import { generateEslintConfig } from '@companion-module/tools/eslint/config.mjs'
 
-const baseConfig = await generateEslintConfig({
+export default await generateEslintConfig({
 	enableTypescript: true,
 })
-
-const customConfig = [
-	...baseConfig,
-
-	{
-		rules: {
-			'n/no-missing-import': 'off',
-			'node/no-unpublished-import': 'off',
-		},
-	},
-]
-
-export default customConfig

@@ -1,14 +1,3 @@
-export interface MeetingInfo {
-	meetingId: string
-	roomType: string
-	isMuted: boolean
-	tabId?: string
-	sdKeyId?: string
-	instant?: boolean
-	serialNumber?: number
-	roomName?: string
-}
-
 export class ModuleState {
 	// Mappings
 	public meetingRoomNumberMap: Record<string, number> = {}
@@ -17,11 +6,30 @@ export class ModuleState {
 	public meetingBusyStatusMap: Record<string, boolean> = {}
 	public meetingSpeakingStatusMap: Record<string, boolean> = {}
 
+	// Room-name font size, 1-10 scale, PER MEETING — the extension sends its own value with
+	// every meeting's update_mic_status, not one dial for every button.
+	public meetingFontSizeMap: Record<string, number> = {}
+
+	public updateRoomFontSize(meetingIdRaw: string | number, levelRaw: unknown): void {
+		const meetingId = String(meetingIdRaw)
+		const level = Number(levelRaw)
+		if (!Number.isFinite(level)) return
+		this.meetingFontSizeMap[meetingId] = Math.max(1, Math.min(10, level))
+	}
+
 	// Action ID (Companion) to Meeting ID mapping
 	public actionIdMeetingIdMap: Record<string, string> = {}
 	public meetingIdActionIdMap: Record<string, string> = {} // Added this mapping
 	// UID to Physical Position mapping
 	public controlIdToLocationMap: Map<string, { row: number; column: number }> = new Map()
+
+	// Last time each meeting was touched by any inbound update — used to bound memory growth
+	// on long-running installations (see pruneStale).
+	public lastSeenMap: Record<string, number> = {}
+
+	private touch(meetingId: string): void {
+		this.lastSeenMap[meetingId] = Date.now()
+	}
 
 	public setControlLocation(controlId: string, row: number, column: number): void {
 		this.controlIdToLocationMap.set(controlId, { row, column })
@@ -29,6 +37,10 @@ export class ModuleState {
 
 	public getControlLocation(controlId: string): { row: number; column: number } | null {
 		return this.controlIdToLocationMap.get(controlId) || null
+	}
+
+	public deleteControlLocation(controlId: string): void {
+		this.controlIdToLocationMap.delete(controlId)
 	}
 
 	public mapActionToMeeting(actionId: string, meetingIdRaw: string | number | null): void {
@@ -42,6 +54,7 @@ export class ModuleState {
 
 			this.actionIdMeetingIdMap[actionId] = meetingId
 			this.meetingIdActionIdMap[meetingId] = actionId
+			this.touch(meetingId)
 		} else {
 			// Unmap
 			const oldMeetingId = this.actionIdMeetingIdMap[actionId]
@@ -55,6 +68,7 @@ export class ModuleState {
 	public updateRoomName(meetingIdRaw: string | number, name: string): void {
 		const meetingId = String(meetingIdRaw)
 		this.meetingIdTitleMap[meetingId] = name
+		this.touch(meetingId)
 	}
 
 	public updateMicStatus(
@@ -67,6 +81,7 @@ export class ModuleState {
 		this.meetingMicStatusMap[meetingId] = isMuted
 		if (isBusy !== undefined) this.meetingBusyStatusMap[meetingId] = isBusy
 		if (isSpeaking !== undefined) this.meetingSpeakingStatusMap[meetingId] = isSpeaking
+		this.touch(meetingId)
 	}
 
 	public getMeetingIdForAction(actionId: string): string | null {
@@ -84,6 +99,7 @@ export class ModuleState {
 		} else {
 			this.activeMeetings.delete(meetingId)
 		}
+		this.touch(meetingId)
 	}
 
 	public getRoomInfoForMeeting(meetingIdRaw: string | number): {
@@ -93,6 +109,7 @@ export class ModuleState {
 		isSpeaking: boolean
 		roomNumber: number
 		isActive: boolean
+		fontSize: number
 	} | null {
 		const meetingId = String(meetingIdRaw)
 		// A room is "known" if it is mapped to a key, has a title, or has a room number.
@@ -110,19 +127,8 @@ export class ModuleState {
 			isSpeaking: this.meetingSpeakingStatusMap[meetingId] ?? false,
 			roomNumber: roomNumber ?? 0,
 			isActive: this.activeMeetings.has(meetingId),
+			fontSize: this.meetingFontSizeMap[meetingId] ?? 5,
 		}
-	}
-
-	public getRoomByNumber(roomNumber: number): { name: string; isMuted: boolean } | null {
-		for (const [meetingId, num] of Object.entries(this.meetingRoomNumberMap)) {
-			if (num === roomNumber) {
-				return {
-					name: this.meetingIdTitleMap[meetingId] || meetingId,
-					isMuted: this.meetingMicStatusMap[meetingId] ?? true,
-				}
-			}
-		}
-		return null
 	}
 
 	public reset(): void {
@@ -131,10 +137,12 @@ export class ModuleState {
 		this.meetingMicStatusMap = {}
 		this.meetingBusyStatusMap = {}
 		this.meetingSpeakingStatusMap = {}
+		this.meetingFontSizeMap = {}
 		this.actionIdMeetingIdMap = {}
 		this.meetingIdActionIdMap = {}
 		this.activeMeetings.clear()
 		this.controlIdToLocationMap.clear()
+		this.lastSeenMap = {}
 	}
 
 	public removeMeeting(meetingId: string): void {
@@ -155,6 +163,25 @@ export class ModuleState {
 		delete this.meetingMicStatusMap[meetingId]
 		delete this.meetingBusyStatusMap[meetingId]
 		delete this.meetingSpeakingStatusMap[meetingId]
+		delete this.meetingFontSizeMap[meetingId]
+		delete this.lastSeenMap[meetingId]
 		this.activeMeetings.delete(meetingId)
+	}
+
+	/**
+	 * Evicts meetings that haven't been touched in longer than maxAgeMs. Bounds the otherwise
+	 * unbounded growth of the per-meeting maps on long-running installations (weeks of uptime,
+	 * hundreds of meetings/day) without disturbing meetings that are merely temporarily inactive.
+	 */
+	public pruneStale(maxAgeMs: number): number {
+		const cutoff = Date.now() - maxAgeMs
+		let pruned = 0
+		for (const [meetingId, lastSeen] of Object.entries(this.lastSeenMap)) {
+			if (lastSeen < cutoff) {
+				this.removeMeeting(meetingId)
+				pruned++
+			}
+		}
+		return pruned
 	}
 }
