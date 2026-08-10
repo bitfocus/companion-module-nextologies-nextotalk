@@ -3,10 +3,15 @@ import type { ModuleInstance } from './main.js'
 import { EMPTY_KEY_PNG, MUTE_KEY_PNG, UNMUTE_KEY_PNG } from './assets.js'
 
 // Maps the extension's 1-10 room-name font-size level to a pixel size for Companion's
-// button `size` style. Level 5 (the default) lands close to what 'auto' typically
-// renders for a short room name, so unconfigured installs look roughly unchanged.
+// button `size` style, anchored to 72px — the most common physical Stream Deck key size
+// (Original/V2/MK.2/Neo). Tuned by eye against the extension's WebHID canvas rendering
+// rather than derived algebraically — Companion's own title renderer and canvas fillText
+// don't produce the same visual size at the same pixel value, so don't assume this ratio
+// should match offscreen.js's roomNameFontRatio().
+const REFERENCE_KEY_SIZE_PX = 72
 function fontSizePxFromLevel(level: number): number {
-	return Math.round(10 + level * 3)
+	const ratio = 0.075 + level * 0.009
+	return Math.round(REFERENCE_KEY_SIZE_PX * ratio)
 }
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
