@@ -16,7 +16,8 @@ Control microphones in Google Meet rooms via the **NextoTalk** Chrome Extension.
 
 1. Add a new connection in Companion and select **Nextologies – Meet Controller**.
 2. Set the **WebSocket Port** to match the port configured in the NextoTalk extension (default: `7005`).
-3. Save. The module status should show **OK** with the port number when the connection is live.
+3. Leave **Host / Bind Address** at its default (`127.0.0.1`) unless the extension runs on a different machine — widening it (e.g. to `0.0.0.0`) exposes the module's commands to anything on the same network, so only do this if you understand the exposure.
+4. Save. The module status shows **Connecting** while the server starts, then **OK** with the host/port once it's actually listening.
 
 > If the status shows a port-in-use error, either change the port here or stop any other process using that port.
 
@@ -56,9 +57,9 @@ Toggles the microphone of the Google Meet room associated with this button.
 
 Drives the button's background colour and icon based on the live room state.
 
-| Option      | Values                | Notes                                                                                                          |
-| ----------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Room Number | `0` (Auto) or `1–100` | `0` = auto-map to whichever room the extension assigns. A specific number pins the button to that room number. |
+| Option      | Values                 | Notes                                                                                                          |
+| ----------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Room Number | `0` (Auto) or `1–9999` | `0` = auto-map to whichever room the extension assigns. A specific number pins the button to that room number. |
 
 **Colour coding:**
 
@@ -73,17 +74,18 @@ Drives the button's background colour and icon based on the live room state.
 
 The button also shows the **room name** as text and a mic icon (muted/unmuted).
 
+**Room name font size:** the font size used for the room-name text is controlled by the NextoTalk extension **per room**, not by a Companion button setting and not by one global dial. The extension stores a `roomNameFontSize` (1–10 scale, default `5`) on each room's own metadata — set via its external `map_meeting_room_to_key` / `update_room_name` / `allocate_room` commands — and sends that room's value with every mic-status update for it. This module keeps its own per-meeting map and converts each room's level to a pixel size with its own formula (`0.075 + level * 0.009`, scaled to a 72px reference key) — tuned by eye to look similarly sized to the extension's WebHID rendering, not derived from the same formula (Companion's title renderer and canvas `fillText` don't produce the same visual size at the same pixel value). There is nothing to configure on the Companion side.
+
 ---
 
 ### Variables
 
 The module exposes these Companion variables:
 
-| Variable                                                    | Description                |
-| ----------------------------------------------------------- | -------------------------- |
-| `$(nextologies-nextotalk:module_version)`                   | Running module version     |
-| `$(nextologies-nextotalk:room_1_name)` … `room_10_name`     | Display name of rooms 1–10 |
-| `$(nextologies-nextotalk:room_1_status)` … `room_10_status` | Mic status of rooms 1–10   |
+| Variable                                     | Description                                                  |
+| -------------------------------------------- | ------------------------------------------------------------ |
+| `$(nextologies-nextotalk:module_version)`    | Running module version (read from `package.json`)            |
+| `$(nextologies-nextotalk:connected_clients)` | Number of WebSocket clients (extensions) currently connected |
 
 ---
 
@@ -130,7 +132,7 @@ If you restart Companion, the extension re-delivers all active room states and t
 
 - **Google Meet only** — the extension targets Google Meet tabs exclusively; other video platforms are not supported.
 - **NextoTalk extension required** — this module is a companion to the NextoTalk Chrome Extension; it does not communicate with Google Meet directly.
-- **One surface** — the module advertises itself as a single `8 × 4` Companion surface to the extension. Physical Stream Deck devices are managed separately through the extension's own Stream Deck plugin.
+- **One surface** — the module advertises itself as a single Companion surface to the extension, without a fixed grid size (actual page/surface dimensions are user-configurable). Physical Stream Deck devices are managed separately through the extension's own Stream Deck plugin.
 - **Room auto-mapping is positional** — buttons that share the same grid coordinates in different Companion pages may map to the same room. Use fixed Room Numbers on the feedback to disambiguate.
 - **No push-to-talk** — the module sends a toggle command on button press. Hold-to-talk (push-to-talk) is not implemented; pressing again re-toggles.
 
