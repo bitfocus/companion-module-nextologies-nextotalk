@@ -503,6 +503,11 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				}
 				break
 			}
+			case SocketCommandActionType.HidButtonPressed:
+				// Not consumed locally — just relay to other clients (e.g. a native macOS app
+				// listening on this same bus). See the extension's MACOS_APP_INTEGRATION.md.
+				this.broadcast(command, ws)
+				break
 			default:
 				this.log('warn', `Unhandled WS action: ${command.action}`)
 				break
