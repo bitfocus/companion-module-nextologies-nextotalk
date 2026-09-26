@@ -68,8 +68,11 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					if (info) {
 						const fontSizePx = fontSizePxFromLevel(info.fontSize)
 
-						if (!info.isActive) {
-							self.log('debug', `Meeting ${meetingId} (${info.name}) is inactive`)
+						if (!info.isActive || !info.hasMicStatus) {
+							self.log(
+								'debug',
+								`Meeting ${meetingId} (${info.name}) is ${!info.isActive ? 'inactive' : 'active but has no mic status yet'}`,
+							)
 							return {
 								bgcolor: combineRgb(0, 0, 0),
 								color: combineRgb(100, 100, 100),

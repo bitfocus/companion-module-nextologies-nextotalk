@@ -14,7 +14,7 @@ export function GetConfigFields(): SomeCompanionConfigField[] {
 			width: 4,
 			min: 1,
 			max: 65535,
-			default: 7005,
+			default: 7006,
 		},
 		{
 			type: 'textinput',
