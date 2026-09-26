@@ -95,7 +95,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	private initWebSocketServer(): void {
-		const port = this.config.port || 7005
+		const port = this.config.port || 7006
 		const host = this.config.host || '127.0.0.1'
 		this.updateStatus(InstanceStatus.Connecting, `Starting on ${host}:${port}…`)
 
@@ -503,6 +503,11 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				}
 				break
 			}
+			case SocketCommandActionType.HidButtonPressed:
+				// Not consumed locally — just relay to other clients (e.g. a native macOS app
+				// listening on this same bus). See the extension's MACOS_APP_INTEGRATION.md.
+				this.broadcast(command, ws)
+				break
 			default:
 				this.log('warn', `Unhandled WS action: ${command.action}`)
 				break

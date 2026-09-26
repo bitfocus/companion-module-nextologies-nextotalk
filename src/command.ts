@@ -19,6 +19,7 @@ export enum SocketCommandActionType {
 	UpdateMicStatus = 'update_mic_status',
 	ActionUpdated = 'action_updated',
 	ToggleMic = 'toggle_mic',
+	HidButtonPressed = 'hid_button_pressed',
 	ActionRemoved = 'action_removed',
 	ReleaseKey = 'release_key',
 	UpdateRoomName = 'update_room_name',

@@ -105,6 +105,7 @@ export class ModuleState {
 	public getRoomInfoForMeeting(meetingIdRaw: string | number): {
 		name: string
 		isMuted: boolean
+		hasMicStatus: boolean
 		isBusy: boolean
 		isSpeaking: boolean
 		roomNumber: number
@@ -120,9 +121,13 @@ export class ModuleState {
 		const isMapped = this.meetingIdActionIdMap[meetingId] !== undefined
 		if (roomNumber === undefined && !hasTitle && !isMapped) return null
 
+		// hasMicStatus distinguishes "we know this room is unmuted/muted" from "a room was
+		// allocated/mapped but no update_mic_status has landed yet" (e.g. right after
+		// RoomAllocated) — the latter must render neutral, not fall back to a "muted" colour.
 		return {
 			name: this.meetingIdTitleMap[meetingId] || meetingId,
 			isMuted: this.meetingMicStatusMap[meetingId] ?? true,
+			hasMicStatus: this.meetingMicStatusMap[meetingId] !== undefined,
 			isBusy: this.meetingBusyStatusMap[meetingId] ?? false,
 			isSpeaking: this.meetingSpeakingStatusMap[meetingId] ?? false,
 			roomNumber: roomNumber ?? 0,
