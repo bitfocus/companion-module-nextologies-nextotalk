@@ -1,15 +1,16 @@
 {
 	"name": "nextologies-nextotalk",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
 		"postinstall": "husky",
 		"format": "prettier -w .",
 		"package": "run build && companion-module-build",
-		"build": "rimraf dist && run build:main",
+		"build": "rimraf dist && run gen:render-assets && run build:main",
+		"gen:render-assets": "node scripts/gen-render-assets.mjs",
 		"build:main": "tsc -p tsconfig.build.json",
-		"dev": "tsc -p tsconfig.build.json --watch",
+		"dev": "run gen:render-assets && tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint",
 		"lint": "run lint:raw .",
 		"test": "vitest run"
@@ -25,6 +26,7 @@
 	},
 	"dependencies": {
 		"@companion-module/base": "~1.14.1",
+		"@resvg/resvg-wasm": "2.6.2",
 		"ws": "^8.21.0"
 	},
 	"devDependencies": {

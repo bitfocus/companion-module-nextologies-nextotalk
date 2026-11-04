@@ -647,25 +647,14 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	// Breaks on whitespace, hyphens, AND underscores (not just spaces) — a name like
-	// "Control-Room-One" or "Studio_A" has no spaces at all, so a space-only split would
-	// never wrap it. The capturing group keeps each delimiter attached to whichever line
-	// it lands on. Mirrors offscreen.js's wrapText() in the extension.
+	// One line per word: breaks at every space (dropped), hyphen and underscore (kept at the end
+	// of the line), whatever the name's length. Mirrors offscreen.js's wrapText() in the extension.
 	private lineBreakedMeetingTitle(title: string): string {
 		if (!title) return ''
-		const maxCharsPerLine = 9
-		const tokens = title.split(/([\s_-])/)
-		let line = ''
-		let wrapped = ''
-		for (const token of tokens) {
-			if ((line + token).length > maxCharsPerLine) {
-				wrapped += `${line.trim()}\n`
-				line = ''
-			}
-			line += token
-		}
-		wrapped += line.trim()
-		return wrapped
+		return title
+			.split(/\s+|(?<=[-_])/)
+			.filter(Boolean)
+			.join('\n')
 	}
 
 	private notifyServerAboutSettingsChange(sdKeyId: string, meetingId: string): void {

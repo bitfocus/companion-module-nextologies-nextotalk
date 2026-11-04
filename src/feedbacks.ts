@@ -1,17 +1,29 @@
 import { combineRgb } from '@companion-module/base'
 import type { ModuleInstance } from './main.js'
-import { EMPTY_KEY_PNG, MUTE_KEY_PNG, UNMUTE_KEY_PNG } from './assets.js'
+import { EMPTY_KEY_PNG } from './assets.js'
+import { ART_PNG64, renderKeyPng64, type KeyArt } from './key-art.js'
 
-// Maps the extension's 1-10 room-name font-size level to a pixel size for Companion's
-// button `size` style, anchored to 72px — the most common physical Stream Deck key size
-// (Original/V2/MK.2/Neo). Tuned by eye against the extension's WebHID canvas rendering
-// rather than derived algebraically — Companion's own title renderer and canvas fillText
-// don't produce the same visual size at the same pixel value, so don't assume this ratio
-// should match offscreen.js's roomNameFontRatio().
-const REFERENCE_KEY_SIZE_PX = 72
+// Fallback only — the room name is normally drawn into the image by renderKeyPng64() so it
+// matches the Elgato plugin (bold, same size). Maps the 1-10 level to Companion's title `size`
+// with the same ratio, on its 72px button.
 function fontSizePxFromLevel(level: number): number {
-	const ratio = 0.075 + level * 0.009
-	return Math.round(REFERENCE_KEY_SIZE_PX * ratio)
+	return Math.round(72 * (0.125 + level * 0.015))
+}
+
+// Key image with the room name drawn in; Companion's own title stays empty. If rendering fails,
+// fall back to the plain artwork with the name as a (regular-weight) Companion title.
+async function keyStyle(
+	self: ModuleInstance,
+	art: KeyArt,
+	name: string,
+	level: number,
+): Promise<{ text: string; size: number; png64: string }> {
+	try {
+		return { text: '', size: fontSizePxFromLevel(level), png64: await renderKeyPng64(art, name, level) }
+	} catch (error) {
+		self.log('warn', `Key image render failed, using Companion title instead: ${String(error)}`)
+		return { text: name, size: fontSizePxFromLevel(level), png64: ART_PNG64[art] }
+	}
 }
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
@@ -66,8 +78,6 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				if (meetingId) {
 					const info = self.state.getRoomInfoForMeeting(meetingId)
 					if (info) {
-						const fontSizePx = fontSizePxFromLevel(info.fontSize)
-
 						if (!info.isActive || !info.hasMicStatus) {
 							self.log(
 								'debug',
@@ -76,9 +86,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 							return {
 								bgcolor: combineRgb(0, 0, 0),
 								color: combineRgb(100, 100, 100),
-								text: info.name,
-								size: fontSizePx,
-								png64: EMPTY_KEY_PNG,
+								...(await keyStyle(self, 'empty', info.name, info.fontSize)),
 							}
 						}
 						self.log(
@@ -88,7 +96,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 
 						// Priority: Busy (Orange) > Speaking (Blue) > Muted (Red) > Unmuted (Green)
 						let bgcolor = info.isMuted ? combineRgb(255, 0, 0) : combineRgb(0, 200, 0)
-						const png64 = info.isMuted ? MUTE_KEY_PNG : UNMUTE_KEY_PNG
+						const art: KeyArt = info.isMuted ? 'muted' : 'unmuted'
 
 						if (info.isBusy) {
 							bgcolor = combineRgb(255, 166, 0) // Orange
@@ -99,9 +107,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 						return {
 							bgcolor,
 							color: combineRgb(255, 255, 255),
-							text: info.name,
-							size: fontSizePx,
-							png64,
+							...(await keyStyle(self, art, info.name, info.fontSize)),
 						}
 					} else {
 						const allAllocated = Object.keys(self.state.meetingRoomNumberMap).join(', ')
