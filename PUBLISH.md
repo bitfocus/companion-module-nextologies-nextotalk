@@ -1,174 +1,145 @@
-# Publishing Plan: companion-module-nextologies-nextotalk
+# Publishing: companion-module-nextologies-nextotalk
 
-Module: **Nextologies Meet Controller** (`nextologies-nextotalk`)  
-Current version: `0.4.0`  
-Target registry: Bitfocus Companion module store
+Module: **Nextologies Meet Controller** (`nextologies-nextotalk`)
+Public repository: https://github.com/bitfocus/companion-module-nextologies-nextotalk (remote `bitfocus`)
+Mirror: https://github.com/nxto-tv/companion-module-nextologies-nextotalk (push URL on `origin`)
+Registry: Bitfocus Developer Portal, listed since v1.0.0 (July 2026)
 
----
-
-## Overview
-
-Bitfocus Companion discovers and installs modules from GitHub. Publishing requires:
-
-1. A public GitHub repository with the module code
-2. A correctly tagged release (`v0.4.0`)
-3. Passing CI checks (lint + build)
-4. Submission to the Bitfocus module list (PR to `bitfocus/companion-bundled-modules`)
-
-The current remote points to an internal dev server (`dev.nextologies.com`). The `manifest.json` already references the target GitHub URL (`github.com/bitfocus/companion-module-nextologies-nextotalk`), which means the repo either needs to be created under the Bitfocus org or under a personal/org GitHub account first.
+Releases so far: v1.0.0, v1.0.1 (review fixes), v1.0.2 (room names drawn into the key image),
+v1.0.3 (fixes for the v1.0.2 review, pending).
 
 ---
 
-## Step 1 — Write the HELP.md
+## How a release flows
 
-The file `companion/HELP.md` is shown to users inside Companion. It currently contains placeholder text.
-
-Update it to include:
-
-- What the module does (Mic Controller for Google Meet / NextoTalk)
-- Prerequisites (NextoTalk app version, WebSocket port)
-- Connection setup (host, port)
-- Available actions and what they do
-- Known limitations
-
-This is a required step before submitting to Bitfocus.
-
----
-
-## Step 2 — Verify the manifest
-
-File: `companion/manifest.json`
-
-Check every field before publishing:
-
-| Field        | Current value                                                       | Action needed                                                         |
-| ------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `id`         | `nextologies-nextotalk`                                             | OK — must be globally unique in Bitfocus registry                     |
-| `version`    | `0.4.0`                                                             | Must match `package.json` version                                     |
-| `repository` | `github.com/bitfocus/companion-module-nextologies-nextotalk`        | Update to actual GitHub URL once repo is created                      |
-| `bugs`       | `github.com/bitfocus/companion-module-nextologies-nextotalk/issues` | Update to match                                                       |
-| `keywords`   | `[]`                                                                | Add relevant terms: `"mic"`, `"mute"`, `"google-meet"`, `"nextotalk"` |
-| `products`   | `["NextoTalk"]`                                                     | Consider adding `"Google Meet"`                                       |
+1. Code lands on `main` in the Bitfocus repository.
+2. The maintainer tags it `v<semver>` and publishes a GitHub Release.
+3. The maintainer submits that tag on the Bitfocus Developer Portal. The submission sits in the
+   **Pending** queue.
+4. A volunteer reviewer runs the review tooling against the tag and sends the report back
+   through the portal (the reports are also kept at
+   https://github.com/digitaldrummerj/companion-module-review/tree/main/reviews/nextologies-nextotalk).
+5. **Changes Required** means: fix, bump, tag, release and submit the new tag. There is no
+   reply box on the report itself; the resubmission is the reply.
+6. **Approved** means the version is live in Companion's module store within minutes.
 
 ---
 
-## Step 3 — Run pre-publish checks locally
+## Step 1 — Pre-release checks
 
 ```bash
-# In the project root
-yarn install
-yarn build
+yarn install --immutable
+yarn build        # also regenerates src/generated/render-assets.ts
 yarn lint
+yarn test         # runs the asset generator first, so it works on a fresh clone
+yarn package      # writes nextologies-nextotalk-<version>.tgz and pkg/
 ```
 
-All three must pass with zero errors before pushing.
+All four must be clean. `yarn package` runs `companion-module-build`, the same validation the
+reviewer's pipeline runs. The two "No license file found" lines it prints for
+`@companion-module/base` and `@resvg/resvg-wasm` are informational.
 
-Also run the Companion module check tool (if not already done):
+Load the `.tgz` into a local Companion (Connections → Manage → Import module package) and check:
+
+- a Meet room maps to a button and follows mute/unmute;
+- a long or renamed room name wraps and fits inside the key;
+- a room mapped before its first mic update shows the neutral (black) look;
+- the connection status reads `v<version> · 127.0.0.1:7006`.
+
+---
+
+## Step 2 — Bump the version
+
+The version lives in two files and must match:
+
+- `package.json` → `"version"`
+- `companion/manifest.json` → `"version"`
+
+`companion/HELP.md` has no version string. The status line, `module_version` variable and
+welcome payload all read `package.json` at runtime.
+
+Commit the bump together with the change it ships.
+
+---
+
+## Step 3 — Push `main` to GitHub
 
 ```bash
-yarn package
+git push bitfocus main
+git push https://github.com/nxto-tv/companion-module-nextologies-nextotalk.git main
 ```
 
-This runs `companion-module-build` and validates the built output. Fix any reported issues.
+The `origin` remote's first push URL (`dev.nextologies.com`) needs the internal credential and
+is pushed separately. Dependabot opens dependency PRs on the Bitfocus repo; rebase onto
+`bitfocus/main` before pushing if any were merged since the last release.
+
+CI (`.github/workflows`): `node.yaml` (build), `lint.yaml`, and `companion-module-checks.yaml`
+(the Bitfocus validation suite, triggered by version tags). All must be green on the tag.
 
 ---
 
-## Step 4 — Create the public GitHub repository
-
-Two options depending on whether Bitfocus grants org access:
-
-### Option A — Under the Bitfocus org (preferred for official listing)
-
-Contact the Bitfocus team via their Discord (`#module-development` channel) or open an issue in `bitfocus/companion` requesting a repo named `companion-module-nextologies-nextotalk` be created in their org. They will add you as a maintainer.
-
-### Option B — Under your own GitHub account/org
-
-Create a new public repo on GitHub (e.g. `github.com/nextologies/companion-module-nextologies-nextotalk`) and update `manifest.json` and `package.json` with that URL.
-
-Either way, once the repo exists:
+## Step 4 — Tag and release
 
 ```bash
-# Remove the internal dev remote and add GitHub
-git remote set-url origin https://github.com/<org>/companion-module-nextologies-nextotalk.git
-
-# Push main branch
-git push -u origin main
+git tag v1.0.3
+git push bitfocus v1.0.3
 ```
 
----
-
-## Step 5 — Create and push the version tag
-
-Companion uses git tags shaped `v<semver>` to identify releases.
-
-```bash
-git tag v0.4.0
-git push origin v0.4.0
-```
-
-This triggers the `companion-module-checks.yaml` CI workflow, which runs the official Bitfocus module validation suite. The workflow must pass (green) before submission.
-
-Check the Actions tab on GitHub after pushing the tag.
+Then on GitHub (bitfocus repo) → **Releases** → **Draft a new release** → pick the tag, title
+`v1.0.3`, and paste the user-facing notes (what changed for operators, not the review IDs).
+Publish it.
 
 ---
 
-## Step 6 — Create a GitHub Release
+## Step 5 — Submit on the Developer Portal
 
-Go to the GitHub repo → **Releases** → **Draft a new release**.
-
-- Tag: `v0.4.0` (select the one you just pushed)
-- Title: `v0.4.0`
-- Release notes: summarise what the module does and any known requirements (NextoTalk app version, WebSocket URL format, etc.)
-
-Publish the release. GitHub Actions (`companion-module-checks.yaml`) will build and optionally attach a `.pkg` artifact.
+1. Sign in to the Bitfocus Developer Portal with the GitHub account that owns the repo.
+2. **My Connections** → `nextologies-nextotalk` → **Submit Version**.
+3. Choose the Git tag (`v1.0.3`). Leave **Is Prerelease** off for a normal release.
+4. The status shows **Pending** until a reviewer picks it up. Review time depends on volunteer
+   availability; the v1.0.2 review arrived two days after submission.
 
 ---
 
-## Step 7 — Submit to Bitfocus module list
+## Step 6 — Answering a review
 
-Fork and open a PR against `bitfocus/companion-bundled-modules`:
+The reviewer's report lists Blocking, Non-blocking and Notes items plus "Assumptions to confirm".
 
-1. Fork `https://github.com/bitfocus/companion-bundled-modules`
-2. In the forked repo, add an entry for this module in the appropriate list file (typically `modules.json` or a similar registry file — check the repo for the exact format)
-3. Entry fields usually required:
-   - `id`: `nextologies-nextotalk`
-   - `repository`: the GitHub URL
-   - `manufacturer`: `Nextologies Limited`
-4. Open a PR with a clear description: what the module controls, what hardware/software it targets, and a link to the GitHub release
+- Fix every Blocking item. Non-blocking items are expected to be fixed too unless there is a
+  reason not to; say so in the release notes if one is skipped.
+- Bump the patch version, go through Steps 1 to 5 again with the new tag.
+- When submitting, or in a message on the `#module-development` channel of the Bitfocus
+  Slack/Discord, state the tag and commit that addresses the review and answer the assumptions
+  in one line each. Keep the review's IDs (H1, M1, ...) so the reviewer can tick them off.
+  The v1.0.0 round was also acknowledged on PR #11 of the Bitfocus repo, mentioning the
+  reviewer; that worked but the portal submission is what moves the queue.
 
-The Bitfocus team reviews PRs periodically. Join their Discord for faster feedback.
+Example for v1.0.3:
 
----
-
-## Step 8 — Post-publish verification
-
-Once the PR is merged and Companion picks up the new module listing:
-
-1. Download the latest Companion release
-2. Open the module store and search for "Nextologies" or "NextoTalk"
-3. Install the module and configure a connection (host + port)
-4. Confirm actions (mute, unmute, push-to-talk) work end-to-end with a real NextoTalk session
+> v1.0.3 (commit b0bc3eb, tag v1.0.3) addresses the v1.0.2 review: H1 resvg objects freed
+> (flat memory over 6000 renders), H2 `yarn test` generates assets first, M1 names wrap and
+> shrink to fit inside the renderer, L1 HELP.md says 7006, L2 mapped rooms without a mic
+> state render neutral. Assumptions A1 to A4 are all correct.
 
 ---
 
-## Checklist summary
+## Checklist
 
-- [ ] `companion/HELP.md` written with real content
-- [ ] `companion/manifest.json` — `keywords`, `products`, and URLs finalised
-- [ ] `yarn build && yarn lint` passes locally
-- [ ] `yarn package` passes with no validation errors
-- [ ] Public GitHub repo created and `origin` remote updated
-- [ ] `main` branch pushed to GitHub
-- [ ] Tag `v0.4.0` pushed; CI passes on GitHub Actions
-- [ ] GitHub Release `v0.4.0` published
-- [ ] PR opened against `bitfocus/companion-bundled-modules`
-- [ ] Module verified in a live Companion installation
+- [ ] `yarn build && yarn lint && yarn test && yarn package` clean
+- [ ] Package loaded into a local Companion and the four checks above pass
+- [ ] `package.json` and `companion/manifest.json` carry the same new version
+- [ ] `main` pushed to `bitfocus` and `nxto-tv`
+- [ ] Tag `v<version>` pushed to `bitfocus`; CI green
+- [ ] GitHub Release published with user-facing notes
+- [ ] Version submitted on the Developer Portal; status Pending
+- [ ] Review answered (new tag submitted, assumptions confirmed)
 
 ---
 
 ## Key links
 
-- Bitfocus Companion module dev docs: https://github.com/bitfocus/companion-module-base
-- Bitfocus bundled modules registry: https://github.com/bitfocus/companion-bundled-modules
-- Bitfocus Discord (module-development channel): https://discord.gg/bitfocus-companion
-- Module checks workflow: `.github/workflows/companion-module-checks.yaml`
+- Module repo: https://github.com/bitfocus/companion-module-nextologies-nextotalk
+- Review reports: https://github.com/digitaldrummerj/companion-module-review/tree/main/reviews/nextologies-nextotalk
+- Releasing a module (Companion docs): https://companion.free/for-developers/module-development/module-lifecycle/releasing-your-module
+- Module versioning rules: https://companion.free/for-developers/git-workflows/versioning
+- Module base API: https://github.com/bitfocus/companion-module-base
