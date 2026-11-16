@@ -73,12 +73,12 @@ export class ModuleState {
 
 	public updateMicStatus(
 		meetingIdRaw: string | number,
-		isMuted: boolean,
+		isMuted: boolean | undefined,
 		isBusy?: boolean,
 		isSpeaking?: boolean,
 	): void {
 		const meetingId = String(meetingIdRaw)
-		this.meetingMicStatusMap[meetingId] = isMuted
+		if (isMuted !== undefined) this.meetingMicStatusMap[meetingId] = isMuted
 		if (isBusy !== undefined) this.meetingBusyStatusMap[meetingId] = isBusy
 		if (isSpeaking !== undefined) this.meetingSpeakingStatusMap[meetingId] = isSpeaking
 		this.touch(meetingId)

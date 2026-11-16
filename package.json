@@ -1,6 +1,6 @@
 {
 	"name": "nextologies-nextotalk",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"main": "dist/main.js",
 	"type": "module",
 	"scripts": {
@@ -13,7 +13,7 @@
 		"dev": "run gen:render-assets && tsc -p tsconfig.build.json --watch",
 		"lint:raw": "eslint",
 		"lint": "run lint:raw .",
-		"test": "vitest run"
+		"test": "run gen:render-assets && vitest run"
 	},
 	"license": "MIT",
 	"repository": {

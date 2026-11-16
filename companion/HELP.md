@@ -8,14 +8,14 @@ Control microphones in Google Meet rooms via the **NextoTalk** Chrome Extension.
 
 - **NextoTalk** Chrome Extension installed and running in your browser
 - **Bitfocus Companion** 3.x or later
-- The NextoTalk extension must be configured to connect to the same WebSocket port as this module (default: **7005**)
+- The NextoTalk extension must be configured to connect to the same WebSocket port as this module (default: **7006**)
 
 ---
 
 ### Connection Setup
 
 1. Add a new connection in Companion and select **Nextologies – Meet Controller**.
-2. Set the **WebSocket Port** to match the port configured in the NextoTalk extension (default: `7005`).
+2. Set the **WebSocket Port** to match the port configured in the NextoTalk extension (default: `7006`). Do not use `7005`: that is the fixed port of the Elgato Stream Deck plugin, and the extension talks to both at once.
 3. Leave **Host / Bind Address** at its default (`127.0.0.1`) unless the extension runs on a different machine — widening it (e.g. to `0.0.0.0`) exposes the module's commands to anything on the same network, so only do this if you understand the exposure.
 4. Save. The module status shows **Connecting** while the server starts, then **OK** with the host/port once it's actually listening.
 
@@ -140,10 +140,10 @@ If you restart Companion, the extension re-delivers all active room states and t
 
 ### Troubleshooting
 
-| Symptom                                          | Likely cause                                                       | Fix                                                                      |
-| ------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Module status shows "Port in use?"               | Another process (or a previous module instance) is using port 7005 | Change the port in module settings and update the extension to match     |
-| Button stays blank after joining a call          | Extension not connected or mismatched port                         | Check the extension's WebSocket URL; confirm the port matches            |
-| Button shows wrong room                          | Grid position collision across pages                               | Set a fixed Room Number in the `mic_status` feedback options             |
-| Mute state out of sync after a Companion restart | Mapping not yet re-delivered                                       | Wait a few seconds; the extension re-sends all room states automatically |
-| Room name not updating                           | Extension version mismatch                                         | Update the NextoTalk Chrome Extension to the latest version              |
+| Symptom                                          | Likely cause                                                                                                                              | Fix                                                                      |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Module status shows "Port in use?"               | Another process (or a previous module instance) is using port 7006, or the port was set to 7005, which the Elgato Stream Deck plugin owns | Change the port in module settings and update the extension to match     |
+| Button stays blank after joining a call          | Extension not connected or mismatched port                                                                                                | Check the extension's WebSocket URL; confirm the port matches            |
+| Button shows wrong room                          | Grid position collision across pages                                                                                                      | Set a fixed Room Number in the `mic_status` feedback options             |
+| Mute state out of sync after a Companion restart | Mapping not yet re-delivered                                                                                                              | Wait a few seconds; the extension re-sends all room states automatically |
+| Room name not updating                           | Extension version mismatch                                                                                                                | Update the NextoTalk Chrome Extension to the latest version              |

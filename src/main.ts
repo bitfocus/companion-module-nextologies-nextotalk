@@ -15,6 +15,7 @@ import { UpdatePresets } from './presets.js'
 import { WebSocketServer, WebSocket } from 'ws'
 import { SocketCommandActionType, SocketCommandType, type RoomMeta, type SocketCommand } from './command.js'
 import { ModuleState } from './state.js'
+import { wrapRoomName } from './key-art.js'
 
 const require = createRequire(import.meta.url)
 // Single source of truth for the running version — read from package.json at runtime so it
@@ -263,14 +264,13 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 				this.state.setMeetingActive(meetingId, true)
 
-				// Update memory state
+				// Update memory state. A mapping without `isMuted` must leave the mic state unknown so
+				// the key renders neutral (see hasMicStatus in state.ts) rather than defaulting to muted.
 				this.state.updateMicStatus(
 					meetingId,
-					isMuted !== undefined ? this.toBool(isMuted) : (this.state.meetingMicStatusMap[meetingId] ?? true),
-					isBusy !== undefined ? this.toBool(isBusy) : (this.state.meetingBusyStatusMap[meetingId] ?? false),
-					isParticipantSpeaking !== undefined
-						? this.toBool(isParticipantSpeaking)
-						: (this.state.meetingSpeakingStatusMap[meetingId] ?? false),
+					isMuted !== undefined ? this.toBool(isMuted) : undefined,
+					isBusy !== undefined ? this.toBool(isBusy) : undefined,
+					isParticipantSpeaking !== undefined ? this.toBool(isParticipantSpeaking) : undefined,
 				)
 
 				const meetingTitle = roomName ?? meetingId
@@ -454,7 +454,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					break
 				}
 				meetingId = String(meetingId)
-				this.state.updateRoomName(meetingId, roomName)
+				this.state.updateRoomName(meetingId, this.lineBreakedMeetingTitle(roomName))
 				this.log('debug', `Updated room name for ${meetingId}: ${roomName}`)
 				this.checkFeedbacks('mic_status')
 
@@ -647,14 +647,11 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	// One line per word: breaks at every space (dropped), hyphen and underscore (kept at the end
-	// of the line), whatever the name's length. Mirrors offscreen.js's wrapText() in the extension.
+	// One line per word (see wrapRoomName in key-art.ts). The renderer wraps again on its own, so
+	// names that reach it unbroken (e.g. the meeting-id fallback) still fit; storing them broken
+	// keeps the Companion-title fallback and the `title` echoed to clients consistent.
 	private lineBreakedMeetingTitle(title: string): string {
-		if (!title) return ''
-		return title
-			.split(/\s+|(?<=[-_])/)
-			.filter(Boolean)
-			.join('\n')
+		return wrapRoomName(title)
 	}
 
 	private notifyServerAboutSettingsChange(sdKeyId: string, meetingId: string): void {
